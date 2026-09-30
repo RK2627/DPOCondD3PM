@@ -3,7 +3,7 @@
 ## Overview
 
 DPOCondD3PM generates 165-bp promoter sequences with Conditional D3PM and
-improves candidate preferences through full-model offline DPO. Species-specific
+improves candidate preferences through full-model offline DPO. Dataset-specific
 feature encoders produce global, full-local, and motif-local conditions, while
 the corresponding activity predictors score generated sequences.
 
@@ -11,18 +11,18 @@ the corresponding activity predictors score generated sequences.
 
 1. Extract the three condition features with the supplied feature encoder.
 2. Build the first-5% high-activity feature pools when required.
-3. Train or sample Conditional D3PM with the selected species configuration.
+3. Train or sample Conditional D3PM with the selected dataset configuration.
 4. Score candidates, construct preference pairs, and run full-model DPO.
 5. Sample promoter sequences from a DPO checkpoint.
 
 ## Repository structure
 
 ```text
-data/             E. coli and Actinobacteria datasets
+data/             E. coli and actinomycete datasets
 Feature/          pretrained feature encoders and feature extraction
 conditionD3PM/    conditional diffusion training and sampling
 DPO/              candidate generation, preference pairs, and full-model DPO
-Predictor/        E. coli and Actinobacteria activity predictors
+Predictor/        E. coli and actinomycete activity predictors
 ```
 
 ## Environment
@@ -52,7 +52,7 @@ python -m Feature.feature --mode extract --csv data/ecoli/ecoli_exp.csv --ckpt F
 python -m Feature.feature --mode extract --csv data/ecoli/ecoli_exp.csv --ckpt Feature/ecoli/feature_encoder_ecoli.pth --feature_type motif_local --out_pth Feature/ecoli/motif_local.pth
 ```
 
-Actinobacteria:
+Actinomycetes:
 
 ```bash
 python -m Feature.feature --mode extract --csv data/actinomycetes/ac_exp.csv --ckpt Feature/actinobacteria/feature_encoder_ac.pth --feature_type global --out_pth Feature/actinobacteria/global.pth
@@ -62,18 +62,20 @@ python -m Feature.feature --mode extract --csv data/actinomycetes/ac_exp.csv --c
 
 Input: the activity-ordered sequence/activity CSV and the matching encoder
 checkpoint. Output: `global.pth`, `full_local.pth`, and `motif_local.pth` in the
-selected `Feature/<species>/` directory.
+corresponding Feature subdirectory.
 
-When a first-5% high-activity pool is required, run `extract_top5` for each
-feature tensor. For example:
+For a first-5% high-activity pool, first sort the corresponding sequence/activity
+CSV by activity in descending order. Use that sorted CSV as `--csv` during
+feature extraction so the feature tensor has the same order. Then run
+`extract_top5` for each feature tensor. For example:
 
 ```bash
 python -c "from Feature.extract_top5 import extract_top5; extract_top5('Feature/ecoli/global.pth', 'Feature/ecoli/global_top5.pth')"
 ```
 
 Repeat with `full_local` and `motif_local`, and use the corresponding species
-directory. This operation assumes that the input data and extracted features
-are ordered from highest to lowest activity.
+directory. `extract_top5` takes the first 5% of the tensor; it does not sort
+features by activity.
 
 ### 2. Activity predictors
 
@@ -83,7 +85,7 @@ E. coli:
 python -m Predictor.ecoli_predictor.predictor_train
 ```
 
-Actinobacteria:
+Actinomycetes:
 
 ```bash
 python -m Predictor.actinobacteria_predictor.Predictor_train --help
@@ -96,7 +98,7 @@ activity score, depending on the selected operation.
 ### 3. Conditional D3PM
 
 Before running, edit `conditionD3PM/config.py` so the data, feature, checkpoint,
-and output paths refer to one species. Point enabled feature paths to the files
+and output paths refer to the selected dataset. Point enabled feature paths to the files
 generated under `Feature/ecoli/` or `Feature/actinobacteria/`.
 
 ```bash
@@ -110,7 +112,7 @@ Training produces a Conditional D3PM checkpoint. Sampling produces generated
 ### 4. Full-model offline DPO
 
 Edit `DPO/config.py` so the data, full and first-5% feature paths, Conditional
-D3PM base checkpoint, predictor, and output paths all refer to the same species.
+D3PM base checkpoint, predictor, and output paths all refer to the same dataset.
 The feature paths may point directly to the tensors generated under `Feature/`.
 
 ```bash
@@ -126,4 +128,4 @@ checkpoints, and final promoter samples.
 ## Third-party attribution
 
 See `THIRD_PARTY_NOTICES.md` for the ProkBERT and ProkBERT-mini components used
-by the Actinobacteria predictor.
+by the actinomycete predictor.
